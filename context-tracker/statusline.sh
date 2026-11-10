@@ -1,8 +1,19 @@
 #!/usr/bin/env bash
 # Context window usage bar for Claude Code's statusLine feature.
 # Reads session JSON on stdin (see https://code.claude.com/docs/en/statusline),
-# prints a full-width bar: green -> yellow -> red -> purple -> dark blue,
-# each color owning 20 percentage points, with the live percent on the right.
+# prints a full-width bar with a colour gradient, with the live percent on the right.
+#
+# Edit GRADIENT_COLORS to change the bar's colours.
+# Hex RGB strings are spaced evenly from 0 % (left) to 100 % (right).
+# Duplicate the last entry to hold a colour flat over the final segment.
+GRADIENT_COLORS=(
+  "00ff00"
+  "ffff00"
+  "ff0000"
+  "800080"
+  "00008b"
+  "00008b"
+)
 
 input=$(cat)
 
@@ -24,27 +35,38 @@ EMPTY=$(( INNER - FILLED ))
 ESC=$'\033'
 RESET="${ESC}[0m"
 
-# RGB color stops at t = 0, 20, 40, 60, 80, 100
 rgb_at() {
   local t=$1
   (( t < 0 )) && t=0
   (( t > 100 )) && t=100
 
-  local lo_t hi_t lo_r lo_g lo_b hi_r hi_g hi_b
-  if   (( t <= 20 )); then lo_t=0;  hi_t=20;  lo_r=0;   lo_g=255; lo_b=0;   hi_r=255; hi_g=255; hi_b=0
-  elif (( t <= 40 )); then lo_t=20; hi_t=40;  lo_r=255; lo_g=255; lo_b=0;   hi_r=255; hi_g=0;   hi_b=0
-  elif (( t <= 60 )); then lo_t=40; hi_t=60;  lo_r=255; lo_g=0;   lo_b=0;   hi_r=128; hi_g=0;   hi_b=128
-  elif (( t <= 80 )); then lo_t=60; hi_t=80;  lo_r=128; lo_g=0;   lo_b=128; hi_r=0;   hi_g=0;   hi_b=139
-  else                     lo_t=80; hi_t=100; lo_r=0;   lo_g=0;   lo_b=139; hi_r=0;   hi_g=0;   hi_b=139
+  local n=${#GRADIENT_COLORS[@]}
+  if (( n == 0 )); then R=255; G=255; B=255; return; fi
+  if (( n == 1 )); then
+    local hex=${GRADIENT_COLORS[0]}
+    R=$(( 16#${hex:0:2} )); G=$(( 16#${hex:2:2} )); B=$(( 16#${hex:4:2} ))
+    return
   fi
 
-  local range=$(( hi_t - lo_t ))
-  if (( range == 0 )); then
+  local segments=$(( n - 1 ))
+  local seg=$(( t * segments / 100 ))
+  (( seg >= segments )) && seg=$(( segments - 1 ))
+
+  local seg_lo=$(( seg * 100 / segments ))
+  local seg_hi=$(( (seg + 1) * 100 / segments ))
+  local seg_range=$(( seg_hi - seg_lo ))
+
+  local hex_lo=${GRADIENT_COLORS[$seg]}
+  local hex_hi=${GRADIENT_COLORS[$((seg + 1))]}
+  local lo_r=$(( 16#${hex_lo:0:2} )) lo_g=$(( 16#${hex_lo:2:2} )) lo_b=$(( 16#${hex_lo:4:2} ))
+  local hi_r=$(( 16#${hex_hi:0:2} )) hi_g=$(( 16#${hex_hi:2:2} )) hi_b=$(( 16#${hex_hi:4:2} ))
+
+  if (( seg_range == 0 )); then
     R=$lo_r; G=$lo_g; B=$lo_b
   else
-    R=$(( lo_r + (hi_r - lo_r) * (t - lo_t) / range ))
-    G=$(( lo_g + (hi_g - lo_g) * (t - lo_t) / range ))
-    B=$(( lo_b + (hi_b - lo_b) * (t - lo_t) / range ))
+    R=$(( lo_r + (hi_r - lo_r) * (t - seg_lo) / seg_range ))
+    G=$(( lo_g + (hi_g - lo_g) * (t - seg_lo) / seg_range ))
+    B=$(( lo_b + (hi_b - lo_b) * (t - seg_lo) / seg_range ))
   fi
 }
 
