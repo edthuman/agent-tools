@@ -1,9 +1,23 @@
 #!/usr/bin/env bash
-# Context window usage bar for Claude Code's statusLine feature.
+# Usage bars for Claude Code's statusLine feature.
 # Reads session JSON on stdin (see https://code.claude.com/docs/en/statusline),
-# prints a full-width bar with a colour gradient, with the live percent on the right.
+# prints one full-width gradient bar per (LABEL, MODE) pair given as arguments.
 #
-# Edit GRADIENT_COLORS to change the bar's colours.
+# Usage: statusline.sh [MODE:LABEL]...
+#   MODE   One of SESSION | FIVEHOUR | WEEK | SPEND (case-insensitive).
+#          Unrecognised or missing values fall back to SESSION.
+#   LABEL  Free text shown beside the percentage. Whitespace is kept as-is;
+#          anything past 20 characters is cut off. Optional, defaults to "".
+#
+# With no arguments at all, prints a single unlabeled SESSION bar.
+# Each MODE:LABEL argument becomes its own bar, one per line, e.g.:
+#   statusline.sh "SESSION:Context" "WEEK:Week"
+
+LABEL_ALIGN="LEFT"
+# LABEL_ALIGN=LEFT  ->  "Label |####---| 75%"
+# LABEL_ALIGN=RIGHT ->  "|####---| Label 75%"
+
+# Edit GRADIENT_COLORS to change the bars' colours.
 # Hex RGB strings are spaced evenly from 0 % (left) to 100 % (right).
 # Duplicate the last entry to hold a colour flat over the final segment.
 GRADIENT_COLORS=(
@@ -17,20 +31,8 @@ GRADIENT_COLORS=(
 
 input=$(cat)
 
-PCT_RAW=$(echo "$input" | jq -r '.context_window.used_percentage // 0')
-PCT=$(printf '%.0f' "$PCT_RAW")
-
 WIDTH=$(( ${COLUMNS:-80} - 4 ))
 (( WIDTH < 10 )) && WIDTH=10
-LABEL="${PCT}%"
-
-# |<bar>| <label>  ->  1 + inner + 1 + 1 + len(label)
-INNER=$(( WIDTH - 3 - ${#LABEL} ))
-(( INNER < 0 )) && INNER=0
-
-FILLED=$(( INNER * PCT / 100 ))
-(( FILLED > INNER )) && FILLED=$INNER
-EMPTY=$(( INNER - FILLED ))
 
 ESC=$'\033'
 RESET="${ESC}[0m"
@@ -70,24 +72,88 @@ rgb_at() {
   fi
 }
 
-BAR=""
-if (( FILLED > 0 )); then
-  for (( i = 0; i < FILLED; i++ )); do
-    if (( INNER > 1 )); then
-      t=$(( i * 100 / (INNER - 1) ))
-    else
-      t=0
-    fi
-    rgb_at "$t"
-    BAR+="${ESC}[38;2;${R};${G};${B}m#"
-  done
-  BAR+="$RESET"
+# Renders one bar line for a given percentage.
+render_bar() {
+  local pct=$1
+  local label=$2
+  local pct_text="${pct}%"
+
+  local align
+  align=$(printf '%s' "$LABEL_ALIGN" | tr '[:lower:]' '[:upper:]')
+
+  local inner prefix text
+  if [[ "$align" == "LEFT" ]]; then
+    prefix=""
+    [[ -n "$label" ]] && prefix="${label} "
+    # <prefix>|<bar>| <pct_text>  ->  len(prefix) + 1 + inner + 1 + 1 + len(pct_text)
+    inner=$(( WIDTH - 3 - ${#prefix} - ${#pct_text} ))
+  else
+    text="$pct_text"
+    [[ -n "$label" ]] && text="${label} ${pct_text}"
+    # |<bar>| <text>  ->  1 + inner + 1 + 1 + len(text)
+    inner=$(( WIDTH - 3 - ${#text} ))
+  fi
+  (( inner < 0 )) && inner=0
+
+  local filled=$(( inner * pct / 100 ))
+  (( filled > inner )) && filled=$inner
+  local empty=$(( inner - filled ))
+
+  local bar=""
+  if (( filled > 0 )); then
+    local i t
+    for (( i = 0; i < filled; i++ )); do
+      if (( inner > 1 )); then
+        t=$(( i * 100 / (inner - 1) ))
+      else
+        t=0
+      fi
+      rgb_at "$t"
+      bar+="${ESC}[38;2;${R};${G};${B}m#"
+    done
+    bar+="$RESET"
+  fi
+
+  local dashes=""
+  if (( empty > 0 )); then
+    printf -v dashes '%*s' "$empty" ''
+    dashes=${dashes// /-}
+  fi
+
+  if [[ "$align" == "LEFT" ]]; then
+    printf '%s|%s%s| %s' "$prefix" "$bar" "$dashes" "$pct_text"
+  else
+    printf '|%s%s| %s' "$bar" "$dashes" "$text"
+  fi
+}
+
+# Looks up the jq path for a MODE and echoes the raw percentage (0 if absent).
+pct_for_mode() {
+  local mode=$1
+  case "$mode" in
+    FIVEHOUR) echo "$input" | jq -r '.rate_limits.five_hour.used_percentage // 0' ;;
+    WEEK)     echo "$input" | jq -r '.rate_limits.seven_day.used_percentage // 0' ;;
+    SPEND)    echo "$input" | jq -r '.rate_limits.spend_limit.used_percentage // 0' ;;
+    *)        echo "$input" | jq -r '.context_window.used_percentage // 0' ;;
+  esac
+}
+
+# Build bars from MODE:LABEL args; no args at all -> one unlabeled SESSION bar.
+if (( $# == 0 )); then
+  set -- "SESSION:"
 fi
 
-DASHES=""
-if (( EMPTY > 0 )); then
-  printf -v DASHES '%*s' "$EMPTY" ''
-  DASHES=${DASHES// /-}
-fi
+OUTPUT=""
+for arg in "$@"; do
+  mode="${arg%%:*}"
+  label="${arg#*:}"
+  mode=$(printf '%s' "${mode:-SESSION}" | tr '[:lower:]' '[:upper:]')
+  label="${label:0:20}"
 
-printf '|%s%s| %s\n' "$BAR" "$DASHES" "$LABEL"
+  pct_raw=$(pct_for_mode "$mode")
+  pct=$(printf '%.0f' "$pct_raw")
+
+  OUTPUT+="$(render_bar "$pct" "$label")"$'\n'
+done
+
+printf '%s' "$OUTPUT"
