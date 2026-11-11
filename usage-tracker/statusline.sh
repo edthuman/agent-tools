@@ -155,6 +155,10 @@ for arg in "$@"; do
   mode="${arg%%:*}"
   label="${arg#*:}"
   mode=$(printf '%s' "${mode:-SESSION}" | tr '[:lower:]' '[:upper:]')
+
+  # Claude Code strips leading whitespace from status line output
+  # Remove leading whitespace here to keep line length calculations accurate
+  label="${label#"${label%%[![:space:]]*}"}"  
   label="${label:0:20}"
 
   pct_raw=$(pct_for_mode "$mode")
