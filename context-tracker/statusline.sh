@@ -37,6 +37,13 @@ WIDTH=$(( ${COLUMNS:-80} - 4 ))
 ESC=$'\033'
 RESET="${ESC}[0m"
 
+display_width() {
+  local chars=${#1}
+  local bytes
+  bytes=$(printf '%s' "$1" | wc -c | tr -d ' ')
+  echo $(( chars + (bytes - chars) / 2 ))
+}
+
 rgb_at() {
   local t=$1
   (( t < 0 )) && t=0
@@ -86,12 +93,12 @@ render_bar() {
     prefix=""
     [[ -n "$label" ]] && prefix="${label} "
     # <prefix>|<bar>| <pct_text>  ->  len(prefix) + 1 + inner + 1 + 1 + len(pct_text)
-    inner=$(( WIDTH - 3 - ${#prefix} - ${#pct_text} ))
+    inner=$(( WIDTH - 3 - $(display_width "$prefix") - $(display_width "$pct_text") ))
   else
     text="$pct_text"
     [[ -n "$label" ]] && text="${label} ${pct_text}"
     # |<bar>| <text>  ->  1 + inner + 1 + 1 + len(text)
-    inner=$(( WIDTH - 3 - ${#text} ))
+    inner=$(( WIDTH - 3 - $(display_width "$text") ))
   fi
   (( inner < 0 )) && inner=0
 
