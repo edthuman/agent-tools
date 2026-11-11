@@ -44,6 +44,9 @@ To add it to all Claude Code sessions, add the command to a global `.claude/sett
 
 You may also add it to `.claude/settings.json` or `.claude/settings.local.json` within a specific folder to only appear for a specific project, or any projects nested within the chosen folder.
 
+> [!NOTE]  
+> Where multiple `settings.json` files pointing to a project have `statusLine` commands set — the most specific one is used.
+
 ## Arguments
 
 ```
