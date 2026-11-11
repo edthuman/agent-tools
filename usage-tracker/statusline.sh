@@ -26,7 +26,6 @@ GRADIENT_COLORS=(
   "ff0000"
   "800080"
   "00008b"
-  "00008b"
 )
 
 input=$(cat)
