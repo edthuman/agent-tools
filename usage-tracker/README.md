@@ -114,7 +114,7 @@ GRADIENT_COLORS=(
   "ffff00"   # yellow
   "ff0000"   # red
   "800080"   # purple
-  "00008b"   # dark blue
+  "0c0cc8"   # dark blue
 )
 ```
 
