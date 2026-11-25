@@ -67,10 +67,19 @@ if ! ( set -o noclobber; echo "$$" > "$LOCK_FILE" ) 2>/dev/null; then
     echo "$$" > "$LOCK_FILE"
 fi
 
+# Empty until captured, so cleanup only restores a color we actually saw.
+ORIG_COLOR=""
+
+# Runs on every exit path: restores the original color, then releases the lock.
 cleanup() {
+    if [ -n "$ORIG_COLOR" ]; then
+        set_bg_color "$ORIG_COLOR"
+    fi
     rm -f "$LOCK_FILE"
 }
 trap cleanup EXIT
+# Route signals through a normal exit so the EXIT trap fires.
+trap 'exit 0' TERM INT HUP
 
 # ----------------------------------------------------------------
 # Functions
@@ -172,7 +181,6 @@ while true; do
         while true; do
             sleep 0.3
             if is_focused; then
-                set_bg_color "$ORIG_COLOR"
                 exit 0
             fi
         done
@@ -181,7 +189,6 @@ while true; do
     # Flash ON phase
     set_bg_color "$FLASH_COLOR"
     if sleep_checking_focus "$FLASH_ON_SECS"; then
-        set_bg_color "$ORIG_COLOR"
         exit 0
     fi
 
