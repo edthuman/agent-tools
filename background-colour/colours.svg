@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="852" height="84" viewBox="0 0 852 84" role="img" aria-label="Terminal background colour samples: red, orange, yellow, green, blue, indigo, violet">
+  <g font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif" text-anchor="middle" fill="#F0F0F0">
+    <rect x="0" y="0" width="114" height="84" rx="8" fill="#5C1A1A"/>
+    <text x="57" y="38" font-size="18" font-weight="600">bgr</text>
+    <text x="57" y="60" font-size="13" opacity="0.85">red</text>
+    <rect x="123" y="0" width="114" height="84" rx="8" fill="#853A00"/>
+    <text x="180" y="38" font-size="18" font-weight="600">bgo</text>
+    <text x="180" y="60" font-size="13" opacity="0.85">orange</text>
+    <rect x="246" y="0" width="114" height="84" rx="8" fill="#6E5900"/>
+    <text x="303" y="38" font-size="18" font-weight="600">bgy</text>
+    <text x="303" y="60" font-size="13" opacity="0.85">yellow</text>
+    <rect x="369" y="0" width="114" height="84" rx="8" fill="#1A4A24"/>
+    <text x="426" y="38" font-size="18" font-weight="600">bgg</text>
+    <text x="426" y="60" font-size="13" opacity="0.85">green</text>
+    <rect x="492" y="0" width="114" height="84" rx="8" fill="#1A2F5C"/>
+    <text x="549" y="38" font-size="18" font-weight="600">bgb</text>
+    <text x="549" y="60" font-size="13" opacity="0.85">blue</text>
+    <rect x="615" y="0" width="114" height="84" rx="8" fill="#2A1A5C"/>
+    <text x="672" y="38" font-size="18" font-weight="600">bgi</text>
+    <text x="672" y="60" font-size="13" opacity="0.85">indigo</text>
+    <rect x="738" y="0" width="114" height="84" rx="8" fill="#4A1A5C"/>
+    <text x="795" y="38" font-size="18" font-weight="600">bgv</text>
+    <text x="795" y="60" font-size="13" opacity="0.85">violet</text>
+  </g>
+</svg>
